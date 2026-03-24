@@ -1,0 +1,120 @@
+% 东北大学本科毕业设计（论文）中期报告 LaTeX 模板
+% 使用说明：
+% 1. 确保 NEUBachelorMidterm.cls 文件与本文件在同一目录
+% 2. 使用 XeLaTeX 编译
+% 3. 正文中的表格请优先使用 \biao、\biaoX、\fitbiao，题注使用 \tizhu
+% 4. 固定表单区域内不建议使用 table / figure 浮动环境
+\documentclass{NEUBachelorMidterm}
+% ==================== 基本信息设置 ====================
+\reportyear{2026}
+\reportmonth{3}
+\reportday{23}
+\studentid{20221001}
+\studentname{李明}
+\grade{2022级}
+\phone{138-0000-2026}
+\email{liming\_cs@mail.neu.edu.cn}
+\internshipunit{东北大学校内}
+\thesistitle{基于XXX的XXX的XXXX的研究}
+
+% ==================== 正文内容 ====================
+\stageonesummary{%
+\section{系统分析与原型设计}
+\suojin 本阶段围绕“面向校内知识库的检索增强问答系统设计与实现”这一题目，完成了需求分析、知识库整理、基础检索链路搭建和原型系统联调，重点梳理了课程查询、培养方案解读和办事流程咨询等典型场景，并明确事实型问答、流程型问答和多文档归纳型问答三类任务。当前原型采用“文档清洗与切分、混合检索、重排、答案生成、结果追踪”五段式流程。
+
+\subsection{知识库构建}
+\suojin 在数据侧，我完成了培养方案、课程大纲、实验中心通知和学院办事流程等资料的清洗与统一编码处理，建立了可直接进入索引阶段的知识库样本。当前阶段重点处理了 PDF 换行、标题层级丢失和重复页脚等问题，并补充了来源文件、页码和主题标签等元数据。
+
+\subsubsection{切分与向量化策略}
+\suojin 在检索评分方面，现阶段采用 BM25 与向量相似度加权融合的方案，其混合评分如式~\eqref{eq:hybrid-score} 所示：
+\begin{equation}
+\label{eq:hybrid-score}
+S(d,q)=\lambda \cdot \mathrm{BM25}(d,q)+(1-\lambda)\cdot \cos(\mathbf{e}_d,\mathbf{e}_q)
+\end{equation}
+
+\suojin 其中，$d$ 表示候选文档片段，$q$ 表示用户问题，$\lambda$ 为权重系数。式~\eqref{eq:hybrid-score} 可以同时保留关键词精确匹配能力和语义检索能力，减少简称、同义表达和长问题场景下的匹配波动。
+
+
+{\zihao{5}
+\tizhu{biao}{知识库构建阶段统计}
+\biaoX{>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}{
+数据来源 & 文档数量 & 切分片段数 & 平均片段长度 \\ \midrule
+培养方案与课程材料 & 38 & 1264 & 428 字 \\ 
+实验中心与办事流程 & 21 & 643 & 395 字 \\ 
+学院通知与常见问答 & 17 & 512 & 372 字 \\ 
+合计 & 76 & 2419 & 407 字 \\ 
+}
+}
+{\zihao{5}
+\tizhu{biao}{不同训练阶段在各任务上的性能对比结果}
+\fitbiao{lcccccc}{
+Models & \begin{tabular}[c]{@{}c@{}}VG\\ (mIoU)\end{tabular} & \begin{tabular}[c]{@{}c@{}}OC\\ (MAE $\downarrow$)\end{tabular} & \begin{tabular}[c]{@{}c@{}}Det\\ (mAP@0.5)\end{tabular} & \begin{tabular}[c]{@{}c@{}}IC\\ (BLEU-4)\end{tabular} & \begin{tabular}[c]{@{}c@{}}SC\\ (Acc)\end{tabular} & \begin{tabular}[c]{@{}c@{}}VQA\\ (Acc)\end{tabular} \\ \midrule
+Base (GLM-4.1V-9B-Base) & 56.26 & 10.81 & 3.56 & 10.99 & 69.78 & 8.16 \\ \midrule
++ SFT (w/o CoT)         & 81.80 & 3.272 & 49.36 & 31.14 & 93.33 & 63.57 \\
+$\Delta$                & (+25.54) & (-7.54) & (+45.80) & (+20.15) & (+23.55) & (+55.41) \\
++ SFT (w/ CoT)          & 87.70 & 2.932 & 74.03 & 33.31 & 96.67 & 74.20 \\
+$\Delta$                & (+31.44) & (-7.88) & (+70.47) & (+22.32) & (+26.89) & (+66.04) \\
++ SFT (w/o CoT) + GRPO  & 86.47 & 4.510 & 56.77 & 30.87 & \textbf{97.56} & 74.09 \\
+$\Delta$                & (+30.21) & (-6.30) & (+53.21) & (+19.88) & (+27.78) & (+65.93) \\
++ SFT (w/ CoT) + GRPO   & \textbf{89.02} & \textbf{2.728} & \textbf{77.06} & \textbf{33.96} & 96.89 & \textbf{77.24} \\
+$\Delta$                & (+32.76) & (-8.08) & (+73.50) & (+22.94) & (+27.11) & (+69.08) \\ 
+}
+}
+\subsection{系统联调与评测}
+\suojin 当前原型后端采用 FastAPI，检索服务通过向量数据库和 BM25 倒排索引联合实现，前端提供问题输入、答案展示、引用来源和调试日志四个区域。在阶段联调中，我重点检查了“问题重写是否偏移原意”“重排是否稳定提升首条命中率”“回答是否能回指原文来源”三项指标，并对召回失败样本做了人工复核。
+
+{\zihao{5}
+\tizhu{biao}{开发集上的配置对比结果}
+\fitbiao{lcccccc}{
+配置方案 & Recall@5 & MRR & 答案准确率 & 平均响应时间/s & 幻觉率 & 备注 \\ \midrule
+BM25 基线 & 0.71 & 0.58 & 0.63 & 0.42 & 0.18 & 无向量检索 \\ 
+向量检索 & 0.79 & 0.64 & 0.70 & 0.57 & 0.15 & bge-m3 嵌入 \\ 
+混合检索 & 0.86 & 0.71 & 0.78 & 0.66 & 0.10 & BM25 与向量加权 \\ 
+混合检索 + 重排 & 0.90 & 0.76 & 0.82 & 0.83 & 0.07 & 加入 reranker \\ 
+}
+}
+
+\suojin 从阶段结果看，混合检索配合重排能够明显提升首条命中率与答案准确率，说明系统总体技术路线可行。我已完成日志字段统一、评测脚本初版和错误样本标注规范，为下一阶段的性能优化和论文写作提供了基础。%
+
+}
+
+\nextstageplan{%
+\suojin 下一阶段将继续围绕系统效果优化和工程完善两个方向推进。算法方面，计划引入查询重写、答案置信度估计和引用片段一致性校验，进一步降低长问题场景下的漏检率与幻觉率；工程方面，将补充用户日志分析、缓存策略和异常监控，使系统在连续测试下保持稳定响应。
+
+\suojin 具体安排上，我会先完成评测集扩充与分类标注，再对检索权重、切分长度、重排阈值等关键参数做系统化实验；之后同步完善“系统设计”“关键算法”“实验结果与分析”等论文章节，并准备中后期答辩所需的演示样例和系统截图。
+
+\suojin 如果需要在正文中插入系统截图、PNG 图片或 PDF 矢量图，建议将图片统一放在当前目录下的 \verbx{figure} 文件夹中，并直接使用模板提供的非浮动插图命令写入正文。例如，图~\ref{fig:ablation-beta} 展示了 PNG 图片在正文中的推荐写法。
+{\zihao{5}
+\tuxia{0.7\linewidth}{figure/Figure_1.png}{路径规划模块界面示意}{fig:ablation-beta}
+}
+\newpage
+{\zihao{5}
+\tuxiaauto[trim=20mm 100mm 20mm 95mm,clip]{figure/abler_vs_beta_p.pdf}{路径规划模块界面示意}{fig:拉拉}
+}
+{\zihao{5}
+\tuxia{1.0\linewidth}{figure/figure.pdf}{路径规划模块界面示意}{fig:发展}
+}
+}
+
+\issues{%
+\suojin 目前的主要问题在于校内文档格式差异较大，少量 PDF 在抽取后仍存在标题层级缺失和表格断裂，影响切分质量；另外，长上下文问题在多轮问答中容易引入冗余片段，导致生成阶段出现答案展开过多或引用不够集中的情况。对于这部分问题，下一阶段需要通过更细粒度的清洗规则和更稳定的重排策略继续优化。%
+}
+
+\othernotes{%
+\suojin 无
+}
+
+\advisoropinion{%
+\suojin 
+}
+
+\advisorsignature{Claude Elwood Shannon}
+\advisoryear{2026}
+\advisormonth{3}
+\advisorday{23}
+
+\begin{document}
+
+\makemidtermreport
+
+\end{document}
