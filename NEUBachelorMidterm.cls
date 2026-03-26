@@ -32,7 +32,7 @@
 % ==================== 颜色与字体 ====================
 \definecolor{NEUMidtermLine}{RGB}{0,0,0}
 \definecolor{NEUMidtermHint}{RGB}{255,102,102}
-
+\newCJKfontfamily{\cusong}[AutoFakeBold={2.17}]{SimSun} %宋体粗体
 \IfFontExistsTF{方正小标宋简体}
   {\newCJKfontfamily\NEUMidtermTitleFamily{方正小标宋简体}}
   {\newCJKfontfamily\NEUMidtermTitleFamily{SimSun}[AutoFakeBold=3]}
